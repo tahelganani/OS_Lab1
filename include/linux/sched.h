@@ -563,7 +563,7 @@ extern struct exec_domain	default_exec_domain;
     journal_info:	NULL,						\
     mpi_queue:       LIST_HEAD_INIT(tsk.mpi_queue),             \
     mpi_groups:      LIST_HEAD_INIT(tsk.mpi_groups),            \
-    mpi_registered:  0,
+    mpi_registered:  0,                                      \
 }
 
 
