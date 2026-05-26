@@ -1,13 +1,16 @@
 #include <linux/mip_wrapper.h>
 #include <linux/slab.h>
+#include <linux/errno.h>
+#include <../include/asm-i386/uaccess.h>
 
 int mpi_add_group(pid_t pid, int group)
 {
     struct task_struct *task = find_task_by_pid(pid);
+    struct mpi_group_entry *entry;
     if (!task)
         return -ENOMEM;
-    
-    struct mpi_group_entry *entry;
+
+    if(mpi_is_in_group(pid, group)) return 0;
 
     entry = kmalloc(sizeof(struct mpi_group_entry), GFP_KERNEL);
 
@@ -17,19 +20,19 @@ int mpi_add_group(pid_t pid, int group)
     entry->group = group;
 
     list_add(&entry->list, &task->mpi_groups);
+    task->mpi_registered = 1;
 
     return 0;
 }
 
 int mpi_remove_group(pid_t pid, int group){
     struct task_struct *task = find_task_by_pid(pid);
-    if (!task)
-        return NULL;
-    
     struct list_head *pos;
     struct list_head *n;
     struct mpi_group_entry *entry;
 
+    if (!task)
+        return 0;
 
     list_for_each_safe(pos, n, &task->mpi_groups) {
         entry = list_entry(pos, struct mpi_group_entry, list);
@@ -37,6 +40,7 @@ int mpi_remove_group(pid_t pid, int group){
         if (entry->group == group) {
             list_del(pos);
             kfree(entry);
+            if(list_empty(&task->mpi_groups)) task->mpi_registered = 0;
             return 0;
         }
     }
@@ -45,13 +49,12 @@ int mpi_remove_group(pid_t pid, int group){
 
 int mpi_is_in_group(pid_t pid, int group){
     struct task_struct *task = find_task_by_pid(pid);
-    if (!task)
-        return NULL;
-    
     struct list_head *pos;
     struct list_head *n;
     struct mpi_group_entry *entry;
 
+    if (!task)
+        return 0;
 
     list_for_each_safe(pos, n, &task->mpi_groups) {
         entry = list_entry(pos, struct mpi_group_entry, list);
@@ -62,30 +65,29 @@ int mpi_is_in_group(pid_t pid, int group){
     }
     return 0;
 }
-
-void mpi_clear_groups(pid_t pid){
-    struct task_struct *task = find_task_by_pid(pid);
-    if (!task)
-        return;
-    
-    //delete all messages before deleting all groups
-    mpi_clear_messages_by_group(pid, -1);
-
-    
+void mpi_clear_groups_task(struct task_struct* task) {
     struct list_head *pos;
     struct list_head *n;
     struct mpi_group_entry *entry;
 
+    if (!task) return;
 
     list_for_each_safe(pos, n, &task->mpi_groups) {
         entry = list_entry(pos, struct mpi_group_entry, list);
         list_del(pos);
         kfree(entry);
     }
-    
     INIT_LIST_HEAD(&task->mpi_groups);
     task->mpi_registered = 0;
-    return;
+}
+
+void mpi_clear_groups(pid_t pid) {
+    struct task_struct *task = find_task_by_pid(pid);
+    if (!task) return;
+    
+    //delete all messages before deleting all groups
+    mpi_clear_messages_by_group(pid, -1);
+    mpi_clear_groups_task(task);
 }
 
 int is_same_group(pid_t pid)
@@ -126,11 +128,11 @@ int is_registered(pid_t pid){
     
 }
 
-struct mpi_message* mpi_message_alloc(pid_t sender, pid_t reciver, int group, const char* data, ssize_t size){
+struct mpi_message* mpi_message_alloc(pid_t sender, pid_t reciver, int group, ssize_t size){
     
         struct mpi_message *msg;
 
-        if (!data || size < 1)
+        if (size < 1)
             return NULL;
 
         msg = kmalloc(sizeof(struct mpi_message), GFP_KERNEL);
@@ -148,7 +150,6 @@ struct mpi_message* mpi_message_alloc(pid_t sender, pid_t reciver, int group, co
         msg->group = group;
         msg->size = size;
 
-        memcpy(msg->data, data, size);
         INIT_LIST_HEAD(&msg->list);
 
         return msg;
@@ -166,15 +167,15 @@ void mpi_message_free(struct mpi_message *msg)
     kfree(msg);
 }
 
-void mpi_clear_messages_by_group(pid_t pid, int group){
+void mpi_clear_messages_by_group(pid_t pid, int group) {
     struct task_struct *task = find_task_by_pid(pid);
-    if (!task){
-        return;
-    }
     struct list_head *pos;
     struct list_head *n;
     struct mpi_message *msg;
 
+    if (!task){
+        return;
+    }
 
     list_for_each_safe(pos, n, &task->mpi_queue) {
         msg = list_entry(pos, struct mpi_message, list);
@@ -183,10 +184,9 @@ void mpi_clear_messages_by_group(pid_t pid, int group){
             list_del(pos);
             mpi_message_free(msg);
         }
-        
-        if (group == -1){
-            INIT_LIST_HEAD(&task->mpi_queue);
-        }
+    }
+    if (group == -1) {
+        INIT_LIST_HEAD(&task->mpi_queue);
     }
 }
 
@@ -212,7 +212,7 @@ int mpi_copy_groups(struct task_struct *child, struct task_struct *parent)
 
         child_entry = kmalloc(sizeof(struct mpi_group_entry), GFP_KERNEL);
         if (!child_entry) {
-            mpi_clear_groups(child->pid);
+            mpi_clear_groups_task(child);
             child->mpi_registered = 0;
             return -ENOMEM;
         }
@@ -224,3 +224,5 @@ int mpi_copy_groups(struct task_struct *child, struct task_struct *parent)
 
     return 0;
 }
+
+

@@ -3,6 +3,7 @@
 
 #include <linux/sched.h>
 #include <linux/list.h>
+#include <linux/linkage.h>
 
 
 struct mpi_message{
@@ -11,7 +12,7 @@ struct mpi_message{
     int group;
     ssize_t size;
     char *data;
-    struct list_head  list;
+    struct list_head list;
 };
 
 
@@ -53,7 +54,11 @@ int mpi_is_in_group(pid_t pid, int group);
  */
 void mpi_clear_groups(pid_t pid);
 
-
+/*
+ * mpi_clear_groups_task
+ * clear group helper by task
+ */
+void mpi_clear_groups_task(struct task_struct* task);
 /*
 ** is_same_group
 ** recieve pid
@@ -75,7 +80,7 @@ int is_registered(pid_t pid);
  ** return a pointer to the message
  ** if allocation failed return NULL
  */
-struct mpi_message* mpi_message_alloc(pid_t sender, pid_t reciver, int group, const char* data, ssize_t size);
+struct mpi_message* mpi_message_alloc(pid_t sender, pid_t reciver, int group, ssize_t size);
 
 // release memory, call it only after deletion from queue
 void mpi_message_free(struct mpi_message *msg);
@@ -87,7 +92,6 @@ void mpi_message_free(struct mpi_message *msg);
  ** used for termination and fork
  */
 void mpi_clear_messages_by_group(pid_t pid, int group);
-
 
 /*
  **

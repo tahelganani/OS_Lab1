@@ -23,6 +23,7 @@
 #include <linux/personality.h>
 #include <linux/compiler.h>
 #include <linux/mman.h>
+#include <linux/mip_wrapper.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -615,11 +616,6 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	*p = *current;
 	p->tux_info = NULL;
 	p->cpus_allowed_mask &= p->cpus_allowed;
-    // HW1- os lab:
-    // initialize all lists
-    // copy only groups from parent to child
-    // copy registration status from parent to child
-    mpi_copy_groups(p, current);
     
 	retval = -EAGAIN;
 	/*
@@ -711,6 +707,15 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
 	if (retval)
 		goto bad_fork_cleanup_namespace;
 	p->semundo = NULL;
+
+    // HW1- os lab:
+    // initialize all lists
+    // copy only groups from parent to child
+    // copy registration status from parent to child
+    retval = mpi_copy_groups(p, current);
+    if(retval) {
+        goto bad_fork_cleanup_namespace;
+    }
 	
 	/* Our parent execution domain becomes current domain
 	   These must match for thread signalling to apply */
