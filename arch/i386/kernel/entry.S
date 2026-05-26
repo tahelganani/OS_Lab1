@@ -650,7 +650,7 @@ ENTRY(sys_call_table)
 	.long SYMBOL_NAME(sys_sched_setaffinity)
 	.long SYMBOL_NAME(sys_sched_getaffinity)
     .long SYMBOL_NAME(sys_mpi_register) /*243 - assignment edit*/
-    .long SYMBOL_NAME(sys_mpi_sent) /*244 - assignment edit*/
+    .long SYMBOL_NAME(sys_mpi_send) /*244 - assignment edit*/
     .long SYMBOL_NAME(sys_mpi_receive) /*245 - assignment edit*/
     .long SYMBOL_NAME(sys_mpi_unregister) /*246 - assignment edit*/
 
