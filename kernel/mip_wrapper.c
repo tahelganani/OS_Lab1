@@ -93,14 +93,13 @@ void mpi_clear_groups(pid_t pid) {
 int is_same_group(pid_t pid)
 {
     struct task_struct *task = find_task_by_pid(pid);
-    if (!task)
-        return 0;
-    
     struct list_head *pos_current;
     struct list_head *pos_other;
     struct mpi_group_entry *current_group;
     struct mpi_group_entry *other_group;
 
+    if (!task)
+        return 0;
 
     if (!current->mpi_registered || !task->mpi_registered)
         return 0;
@@ -224,5 +223,38 @@ int mpi_copy_groups(struct task_struct *child, struct task_struct *parent)
 
     return 0;
 }
+
+asmlinkage int sys_mpi_register(int mpi_gid) {
+    return mpi_add_group(current->pid, mpi_gid);
+}
+
+asmlinkage int sys_mpi_send(pid_t pid, char *message, ssize_t message_size) {
+    struct mpi_message* msg;
+    struct task_struct* receiver;
+    int group;
+
+    if(!message || message_size < 1) {return -EINVAL;}
+    receiver = find_task_by_pid(pid);
+    if(!receiver) {return -ESRCH;}
+    group = is_same_group(pid);
+    if(!group) {return -EPERM;}
+    msg = mpi_message_alloc(current->pid, pid, group, message_size);
+    if(!msg) {return -ENOMEM;}
+    if(copy_from_user(msg->data, message, message_size)) {
+        mpi_message_free(msg);
+        return -EFAULT;
+    }
+    list_add_tail(&msg->list, &receiver->mpi_queue);
+    return 0;
+}
+
+asmlinkage int sys_mpi_receive(pid_t pid, char *message, ssize_t message_size) {
+
+}
+
+asmlinkage int sys_mpi_unregister(int mpi_gid) {
+    
+}
+
 
 

@@ -561,6 +561,9 @@ extern struct exec_domain	default_exec_domain;
     blocked:		{{0}},						\
     alloc_lock:		SPIN_LOCK_UNLOCKED,				\
     journal_info:	NULL,						\
+    mpi_queue:       LIST_HEAD_INIT(tsk.mpi_queue),             \
+    mpi_groups:      LIST_HEAD_INIT(tsk.mpi_groups),            \
+    mpi_registered:  0,
 }
 
 

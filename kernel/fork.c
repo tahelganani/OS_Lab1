@@ -24,7 +24,6 @@
 #include <linux/compiler.h>
 #include <linux/mman.h>
 #include <linux/mip_wrapper.h>
-
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
 #include <asm/uaccess.h>

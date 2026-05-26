@@ -99,4 +99,11 @@ void mpi_clear_messages_by_group(pid_t pid, int group);
  */
 int mpi_copy_groups(struct task_struct *child, struct task_struct *parent);
 
+//syscall implementations :)
+
+asmlinkage int sys_mpi_register(int mpi_gid);
+asmlinkage int sys_mpi_send(pid_t pid, char *message, ssize_t message_size);
+asmlinkage int sys_mpi_receive(pid_t pid, char *message, ssize_t message_size);
+asmlinkage int sys_mpi_unregister(int mpi_gid);
+
 #endif // !_MIP_WRAPPER_H
